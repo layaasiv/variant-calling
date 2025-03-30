@@ -231,4 +231,65 @@ Maximum resident set size (kbytes): 33608
 Ran gatk HaplotypeCaller successfully:
 
 ```
+Percent of CPU this job got: 0%
+Elapsed (wall clock) time (h:mm:ss or m:ss): 2:50:36
+Average shared text size (kbytes): 0
+Average unshared data size (kbytes): 0
+Average stack size (kbytes): 0
+Average total size (kbytes): 0
+Maximum resident set size (kbytes): 35080
 ```
+
+
+## Mar 1, 2025
+
+
+Ran Bowtie 2 aligner. 
+
+Output:
+
+```
+17556673 reads; of these:
+  17556673 (100.00%) were paired; of these:
+    15185087 (86.49%) aligned concordantly 0 times
+    1851602 (10.55%) aligned concordantly exactly 1 time
+    519984 (2.96%) aligned concordantly >1 times
+    ----
+    15185087 pairs aligned concordantly 0 times; of these:
+      81882 (0.54%) aligned discordantly 1 time
+    ----
+    15103205 pairs aligned 0 times concordantly or discordantly; of these:
+      30206410 mates make up the pairs; of these:
+        21932819 (72.61%) aligned 0 times
+        6010774 (19.90%) aligned exactly 1 time
+        2262817 (7.49%) aligned >1 times
+37.54% overall alignment rate
+```
+
+
+```
+Percent of CPU this job got: 19%
+Elapsed (wall clock) time (h:mm:ss or m:ss): 13:48:48
+Average shared text size (kbytes): 0
+Average unshared data size (kbytes): 0
+Average stack size (kbytes): 0
+Average total size (kbytes): 0
+Maximum resident set size (kbytes): 174204
+```
+
+For issues with accessing docker: ```sudo usermod -aG docker $USER```
+
+
+## Mar 29, 2025
+
+Trying to convert the variant calling pipeline into a nextflow script. 
+Make sure you're in the nextflow env before running nf pipelines because that's where Java 11 is installed.
+
+Was previously running into issues with CreateSeqDict and FastQC processes. So, I isolated fastqc into a separate nf script to troubleshoot and fixed it. It now runs successfully. 
+
+There were a couple of issues I noticed:
+
+1) 1 param variable was defined twice 
+2) The directory you want for the results to be stored and accessed outside the working dir should be specified in publishDir in the process. However, in the 'oputput' part of the process definition, you just mention dir which will be in the working dir. In the script, before you run the fastqc, mkdir for the dir mentioned in 'ouput'. Overall, do not mix the definition of these 2 components up within the process definition.
+
+Next, to troubleshoot CreateSeqDict process. 
