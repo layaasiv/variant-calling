@@ -53,7 +53,7 @@ Total written (filtered):  8,930,212,125 bp (99.8%)
 Command: 
 
 ```
-trimmomatic -PE -threads 3 -phred33 cutadapt/adapt_SRR3340911_1.fastq cutadapt/adapt_SRR3340911_2.fastq \
+trimmomatic PE -threads 3 -phred33 cutadapt/adapt_SRR3340911_1.fastq cutadapt/adapt_SRR3340911_2.fastq \
 trim_SRR3340911_1.fastq trim_unpaired_SRR3340911_1.fastq trim_SRR3340911_2.fastq trim_unpaired_SRR3340911_2.fastq \
 LEADING:3 TRAILING:3 SLIDINGWINDOW:5:15 MINLEN:85
 ```
