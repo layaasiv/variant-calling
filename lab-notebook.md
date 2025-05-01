@@ -293,3 +293,68 @@ There were a couple of issues I noticed:
 2) The directory you want for the results to be stored and accessed outside the working dir should be specified in publishDir in the process. However, in the 'oputput' part of the process definition, you just mention dir which will be in the working dir. In the script, before you run the fastqc, mkdir for the dir mentioned in 'ouput'. Overall, do not mix the definition of these 2 components up within the process definition.
 
 Next, to troubleshoot CreateSeqDict process. 
+
+## Apr 4, 2025
+
+Got the nextflow pipeline working and better understanding how this works. 
+
+Trying to make same progress with the bowtie2 pipeline. Running MarkDuplicatesSpark and BQSR, but got error that the sam file produced by bowtie2 does not contain RG lines. Therefore, had to install picard package: 
+
+```conda install bioconda::picard```
+
+And then run this function:
+
+```
+picard AddOrReplaceReadGroups \
+I=bowtie_aligned_SRR3340911.sam \
+O=bowtie_aligned_SRR3340911_rg.sam \
+RGID=SRR3340911 \
+RGLB=lib1 \
+RGPL=ILLUMINA \
+RGPU=seq \
+RGSM=SRR3340911
+```
+Elapsed time: 3.72 minutes.
+Runtime.totalMemory()=715128832
+
+RGID: can be set to anything that makes sense \
+RGLB: library -- library prep kit used \
+RGPL: platform \
+RGPU: platform unit -- i.e., flowcell or sequencing run \
+RGSM: sample name
+
+Initially, tried to run with just the ID, PL and SM info (as in BWA), but the other fields were also required in this case. So, inserted some arbitrary terms. 
+
+
+## May 1, 2025 
+Successfully running the nextflow script now. 
+
+I have combined both BWA and bowtie2 processes into the same pipeline. 
+
+Comparing the aligners using these metrics:
+
+1) samtools flagstat
+2) gatk collect alignment metrics 
+3) gatk collect insert size metrics 
+
+Found that BWA in general gives better alignment results for this data. Here is a summary of the results extracted from the samtools flagstat output:
+
+| Metric | BWA | Bowtie2 | Notes |
+| ------ | --- | ------- | ----- |
+| Total reads | 52.5M | 35.1M | Seems like Bowtie2 has been run on a subset of reads, even though this is not the case |
+| Mapped (%) | 99.10% | 37.54% | Massive difference here — very low for Bowtie2 |
+| Properly paired (%) | 88.48% | 13.51%	Huge quality gap |
+| Duplicates | 20.4M | 12.3M | Expected — scales with mapped reads |
+| Singletons | 0.15% | 23.31% | Indicates many reads in Bowtie2 had unmapped mates |
+| Supplementary | 17.3M | 0 | BWA produced lots of supplementary alignments (e.g. split reads, chimeras) — Bowtie2 didn’t report any |
+
+
+Since both BWA-MEM and Bowtie2 used the same reference files, these likely are not an issue. \
+Here are some possible reasons why Bowtie2 is performing poorly on this data: 
+
+1) Bowtie2, by default, runs in "fast" mode, which trades off speed for sensitivity. BWA-MEM is sensitive by default.
+2) Bowtie2 discards pairs more readily when insert size or orientation are not as expected.
+3) Bowtie2 is also more strict about gaps and mismatches at default than BWA-MEM.
+4) BWA-MEM also handles ambiguous/multi-mapping reads better, which is advantageous in Arabidopsis thaliana genome which has repetitive regions.
+
+Overall, BWA-MEM gives better alignment results for genomic data from Arabidopsis thaliana. However, to improve the performance of Bowtie2, one method we can try is running it with the ```--very-sensitive``` parameter. Interestingly, the authors of the paper I'm replicating used only the default version of Bowtie2 and were able to get comparable mapping quality to BWA-MEM. 
