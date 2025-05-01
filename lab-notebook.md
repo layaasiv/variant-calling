@@ -343,7 +343,7 @@ Found that BWA in general gives better alignment results for this data. Here is 
 | ------ | --- | ------- | ----- |
 | Total reads | 52.5M | 35.1M | Seems like Bowtie2 has been run on a subset of reads, even though this is not the case |
 | Mapped (%) | 99.10% | 37.54% | Massive difference here — very low for Bowtie2 |
-| Properly paired (%) | 88.48% | 13.51%	Huge quality gap |
+| Properly paired (%) | 88.48% | 13.51%	| Huge quality gap |
 | Duplicates | 20.4M | 12.3M | Expected — scales with mapped reads |
 | Singletons | 0.15% | 23.31% | Indicates many reads in Bowtie2 had unmapped mates |
 | Supplementary | 17.3M | 0 | BWA produced lots of supplementary alignments (e.g. split reads, chimeras) — Bowtie2 didn’t report any |
