@@ -10,7 +10,7 @@ Aligners being assessed in this project are:
 ### BWA-MEM
 The table below shows the alignment metrics for BWA-MEM (derived from samtools flagstat):
 
-| Metric | BWA | 
+| Metric | BWA-MEM | 
 | ------ | --- |
 | Total reads | 52.5M |
 | Mapped (%) | 99.10% |
