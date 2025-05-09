@@ -178,6 +178,7 @@ process BWA {
         path ref_fasta
         path trimmed_read1
         path trimmed_read2
+        val base_fn
     
     output:
         path "${ref_fasta}.amb"
@@ -185,7 +186,7 @@ process BWA {
         path "${ref_fasta}.bwt"
         path "${ref_fasta}.pac"
         path "${ref_fasta}.sa"
-        path "SRR3340911_paired.sam", emit: "bwa_sam"
+        tuple path("*.sam"), val(base_fn) into bwa_out_ch
     
     script:
     """
@@ -196,7 +197,7 @@ process BWA {
     bwa mem -t 4 -R "@RG\\tID:SRR3340911\\tPL:ILLUMINA\\tSM:SRR3340911" \
     ${ref_fasta} \
     ${trimmed_read1} ${trimmed_read2} \
-    > SRR3340911_paired.sam
+    > ${base_fn}_bwa.sam
     """
 }
 
@@ -214,7 +215,7 @@ process bowtie {
         val idx_filename_base
         path trimmed_read1
         path trimmed_read2
-        val sam_filename_base
+        val base_fn
 
     output:
         path "${idx_filename_base}.1.bt2"
@@ -223,7 +224,7 @@ process bowtie {
         path "${idx_filename_base}.4.bt2"
         path "${idx_filename_base}.rev.1.bt2"
         path "${idx_filename_base}.rev.2.bt2"
-        path "${sam_filename_base}.sam", emit: "bt_sam"
+        path "${base_fn}_bowtie_raw.sam", emit: "bt_sam"
 
     script:
     """
@@ -239,7 +240,7 @@ process bowtie {
     -x ${idx_filename_base} \
     -1 ${trimmed_read1} \
     -2 ${trimmed_read2} > \
-    ${sam_filename_base}.sam
+    ${base_fn}_bowite_raw.sam
     """
 }
 
@@ -259,20 +260,46 @@ process add_rg {
         val RGPL
         val RGPU
         val RGSM
+        val base_fn
     
     output:
-        path "${bowtie_aligned_sam.baseName}_rg.sam", emit: "bt_rg_sam"
+        tuple path("*.sam"), val(base_fn) into bowtie_out_ch
 
     script:
     """
     picard AddOrReplaceReadGroups \
     I=${bowtie_aligned_sam} \
-    O=${bowtie_aligned_sam.baseName}_rg.sam \
+    O=${base_fn}_bowtie.sam \
     RGID=${RGID} \
     RGLB=${RGLB} \
     RGPL=${RGPL} \
     RGPU=${RGPU} \
     RGSM=${RGSM}
+    """
+}
+
+/*
+Sort SAM files
+*/
+
+process st_sort_index {
+    conda "/home/layaasiv/miniconda3/envs/sra-tools"
+
+    publishDir "${params.outdir}/metrics", mode: "symlink"
+
+    input:
+        path raw_aligned_sam
+        val out_bam_fn
+
+    output:
+        path "${out_bam_fn}_sorted.bam"
+        path "${out_bam_fn}_sorted.bam.bai"
+
+    script:
+    """
+    samtools -Sb ${raw_aligned_sam} | samtools sort -o ${out_bam_fn}_sorted.bam
+
+    samtools index ${out_bam_fn}_sorted.bam
     """
 }
 
@@ -430,6 +457,44 @@ process gatk_collectmetrics {
 
  }
 
+ process aln_metrics {
+    conda "/home/layaasiv/miniconda3/envs/sra-tools"
+
+    publishDir "${params.outdir}/metrics", mode: "copy"
+
+    input:
+        path ref_fasta
+        path markeddup_bam
+        val aligner_name
+    
+    output:
+        path "${aligner_name}/${markeddup_bam.baseName}_stats.txt"
+        path "qualimap_bamqc/*"
+        path "${aligner_name}/${aligner_name}_picard_metrics.txt"
+
+    script:
+    """
+    echo "Running samtools stats"
+
+    samtools stats ${markeddup_bam} > ${aligner_name}/${markeddup_bam.baseName}_stats.txt
+
+    echo "Running qualimap"
+
+    qualimap bamqc \
+    -bam ${markeddup_bam} \
+    -outdir ${aligner_name}/qualimap_bamqc \
+    -outformat HTML \
+    -nt 4
+
+    echo "Runnning picard alignment summary metrics"
+
+    picard CollectAlignmentSummaryMetrics \
+    R=${ref_fasta} \
+    I=${markeddup_bam} \
+    O=${aligner_name}/${aligner_name}_picard_metrics.txt
+    """
+}
+
 process gatk_haplotypecaller {
     container "broadinstitute/gatk"
 
@@ -491,10 +556,9 @@ process gatk_haplotypecaller {
     """
  }
 
-
 workflow {
 
-    // Create input channel (single file via CLI parameter)
+    // Create input channel
     fasta_ch = Channel.fromPath(params.ref_fasta)
     read1_ch = Channel.fromPath(params.read1)
     read2_ch = Channel.fromPath(params.read2)
@@ -519,26 +583,32 @@ workflow {
     trimmed_out = trimmomatic(cutadapt_out.adapt_read1, cutadapt_out.adapt_read2)
 
     // Run BWA alignment
-    bwa_out = BWA(fasta_ch, trimmed_out.trimmed_read1, trimmed_out.trimmed_read2)
+    bwa_out = BWA(fasta_ch, trimmed_out.trimmed_read1, trimmed_out.trimmed_read2, "SRR3340911")
 
     // Run Bowtie2 alignment
     bowtie_out = bowtie(fasta_ch, "tair10_ref", trimmed_out.trimmed_read1, trimmed_out.trimmed_read2, "SRR3340911")
 
     // Add missing RG lines to Bowtie .sam file
-    rg_sam = add_rg(bowtie_out.bt_sam, "SRR3340911", "lib1", "ILLUMINA", "seq", "SRR3340911")
+    rg_sam = add_rg(bowtie_out.bt_sam, "SRR3340911", "lib1", "ILLUMINA", "seq", "SRR3340911", "SRR3340911")
+
+    // Convert SAM to BAM, sort and index 
+    // st_sort_index()
 
     // Mark duplicates and sort the BWA sam file
-    markdupsort_out = markdupsort(bwa_out.bwa_sam, "bwa_SRR3340911", rg_sam.bt_rg_sam, "bowtie_SRR3340911")
+    // markdupsort_out = markdupsort(bwa_out.bwa_sam, "bwa_SRR3340911", rg_sam.bt_rg_sam, "bowtie_SRR3340911")
 
     // Build BQSR model and apply it to the aligned reads file
-    bqsr_out = bqsr(fasta_ch, st_index_out.ref_fasta_fai, gatk_dict_out.ref_fasta_dict, refvcf_ch, gatk_vcfidx.ref_vcf_idx, markdupsort_out.bwa_sort_dedup_bam, "bwa_recal_data", markdupsort_out.bt_sort_dedup_bam, "bowtie_recal_data")
+    // bqsr_out = bqsr(fasta_ch, st_index_out.ref_fasta_fai, gatk_dict_out.ref_fasta_dict, refvcf_ch, gatk_vcfidx.ref_vcf_idx, markdupsort_out.bwa_sort_dedup_bam, "bwa_recal_data", markdupsort_out.bt_sort_dedup_bam, "bowtie_recal_data")
 
     // Collect alignment and insert size metrics
-    gatk_collectmetrics(fasta_ch, bqsr_out.bwa_bqsr_bam, bqsr_out.bt_bqsr_bam)
+    // gatk_collectmetrics(fasta_ch, bqsr_out.bwa_bqsr_bam, bqsr_out.bt_bqsr_bam)
+
+    // Alignment metrics
+    // aln_metrics(fasta_ch, )
 
     // Variant calling via GATK HaplotypeCaller 
-    hapcaller_out = gatk_haplotypecaller(fasta_ch, st_index_out.ref_fasta_fai, gatk_dict_out.ref_fasta_dict, bqsr_out.bwa_bqsr_bam, "SRR3340911")
+    // hapcaller_out = gatk_haplotypecaller(fasta_ch, st_index_out.ref_fasta_fai, gatk_dict_out.ref_fasta_dict, bqsr_out.bwa_bqsr_bam, "SRR3340911")
 
     // Selecting variant types
-    gatk_selectsnpsindels(fasta_ch, hapcaller_out.bwa_raw_var, "SNP", "INDEL", "raw_snps", "raw_indels")
+    // gatk_selectsnpsindels(fasta_ch, hapcaller_out.bwa_raw_var, "SNP", "INDEL", "raw_snps", "raw_indels")
 }
