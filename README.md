@@ -9,9 +9,10 @@ Aligners being assessed in this project are:
 
 ### Comparing alignment metrics
 
-![alt](/home/layaasiv/professional-dev/variant-calling/nf_revised/results_nf/metrics/plots/overall_alignment_metrics.png)
+![](plots/overall_alignment_metrics.png)
 
-![alt](/home/layaasiv/professional-dev/variant-calling/nf_revised/results_nf/metrics/plots/alignment_error_metrics.png)
+![](plots/alignment_error_metrics.png)
+
 
 ### Conclusions
 BWA-MEM gives better alignment results than Bowtie2. 
