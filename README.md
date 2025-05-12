@@ -7,29 +7,11 @@ Aligners being assessed in this project are:
 * Bowtie2
 * GEM3
 
-### BWA-MEM
-The table below shows the alignment metrics for BWA-MEM (derived from samtools flagstat):
+### Comparing alignment metrics
 
-| Metric | BWA-MEM | 
-| ------ | --- |
-| Total reads | 52.5M |
-| Mapped (%) | 99.10% |
-| Properly paired (%) | 88.48% |
-| Duplicates | 20.4M |
-| Singletons | 0.15% |
-| Supplementary | 17.3M |
+![alt](/home/layaasiv/professional-dev/variant-calling/nf_revised/results_nf/metrics/plots/overall_alignment_metrics.png)
 
-### Bowtie2
-The table below shows the alignment metrics for Bowtie2 (derived from samtools flagstat):
-
-| Metric | Bowtie2 |
-| ------ | --- |
-| Total reads | 35.1M |
-| Mapped (%) | 37.54% |
-| Properly paired (%) | 13.51% |
-| Duplicates | 12.3M |
-| Singletons | 23.31% |
-| Supplementary | 0 |
+![alt](/home/layaasiv/professional-dev/variant-calling/nf_revised/results_nf/metrics/plots/alignment_error_metrics.png)
 
 ### Conclusions
 BWA-MEM gives better alignment results than Bowtie2. 
