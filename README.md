@@ -23,6 +23,8 @@ After filtering (100 <= insert size <= 2000):
 |--------|---------|-------|
 |![](plots/SRR3340911_bwa_insert_filtered_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png) | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png) |
 
+The following are some plots showing main alignment metrics:
+
 ![This plot comapares various alignment metrics collected from picard and samtools.](plots/overall_alignment_metrics.png)
 
 ![This plot compares error rates between the aligners.](plots/alignment_error_metrics.png)
