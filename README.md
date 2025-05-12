@@ -9,18 +9,39 @@ Aligners being assessed in this project are:
 
 ### Comparing alignment metrics
 
-![This plot comapares various alignment metrics collected from picard and samtools. It shows the percent of aligned reads, and percent of reads aligned where both reads of a pair are aligned to the reference in the expected orientation and distance from each other. It also shows percent of reads where mapping quality is 0, indicating that the read aligned to multiple genome regions with equal confidence. The duplication rate indicates the amount of PCR duplicates, and percent of chimeras describes reads that could possibly represent structural variants.](plots/overall_alignment_metrics.png)
+![This plot comapares various alignment metrics collected from picard and samtools.](plots/overall_alignment_metrics.png)
 
 ![This plot compares error rates between the aligners.](plots/alignment_error_metrics.png)
 
+This table shows an overview of the data:
+
+| Metric | BWA | Bowtie2 | GEM3 |
+| ------ | --- | ------- | ----- |
+| Total reads | 24.0M | 4.85M | 28.2M |
+| Mapped reads (%) | 100 | 100 | 100 |
+| Properly paired (%) | 99.03 | 97.71 | 100 |
+| Improperly paired (%) | 0.97 | 2.29 | 0 |
+| Duplicates (%) | 41.6 | 37.3 | 41.7 |
+| Mismatch rate (%) | 0.78 | 2.94 | 1.06 | 
+| Error rate (%) | 0.70 | 2.18 | 0.76 |
+| Indel rate (%) | 0.08 | 0.84 | 0.33 |
+| MAPQ=0 reads (%) | 12.1 | 22.9 | 47.9 |
+| Insert size (mean; bp) | 221.2 | 299.7 | 245.8 |
+| Insert size (stdev; bp) | 79.3 | 52.2 | 131.4 |
+
 
 ### Conclusions
-BWA-MEM gives better alignment results than Bowtie2. 
-Here are some possible reasons why Bowtie2 is performing poorly on this data: 
 
-1) Bowtie2, by default, runs in "fast" mode, which trades off speed for sensitivity. BWA-MEM is sensitive by default.
-2) Bowtie2 discards pairs more readily when insert size or orientation are not as expected.
-3) Bowtie2 is also more strict about gaps and mismatches at default than BWA-MEM.
-4) BWA-MEM also handles ambiguous/multi-mapping reads better, which is advantageous in Arabidopsis thaliana genome which has repetitive regions.
+Look at alignment quality, all the reads were aligned to the reference genome for all aligners. It should be noted that the raw SAM out of the aligners were analyzed for insert size, and reads with insert sizes shorter than 100 or longer than 2000 were filtered out. The insert size histograms before and after filtering are shown below:
 
-Overall, BWA-MEM gives better alignment results for genomic data from Arabidopsis thaliana. However, to improve the performance of Bowtie2, one method we can try is running it with the ```--very-sensitive``` parameter. Interestingly, the authors of the paper I'm replicating used only the default version of Bowtie2 and were able to get comparable mapping quality to BWA-MEM
+| ![](plots/SRR3340911_bwa_insert_histogram.png "BWA-MEM raw BAM") | ![](plots/SRR3340911_bowtie2_insert_histogram.png "Bowtie2 raw SAM") | ![](plots/SRR3340911_gem3_insert_histogram.png "GEM3 raw SAM") |
+
+| ![](plots/SRR3340911_bwa_insert_filtered_histogram.png "BWA-MEM raw BAM") | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png "Bowtie2 raw SAM") | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png "GEM3 raw SAM") |
+
+Most of the reads in BWA-MEM and Bowtie2 had their pair align as expected (matching orientation and distance from each other). 100% of the reads aligned using GEM3 achieved this. 
+
+Mapping quality (MAPQ) describes the confidence with which a read has been aligned to a specific region of the genome. A lower MAPQ indicates that a read aligned to multiple regions with equal confidence, increasing the ambiguity of its alignment. BWA-MEM has the lowest proportion of reads with a MAPQ=0, whereas 47.9% of reads aligned by GEM3 are ambiguous. 
+
+All aligners show similarly high duplication rate, indicating that there are many PCR duplicates detected by all aligners in this dataset. The proportion of chimeric reads are very high in BWA-MEM. Usually, chimeras are artificial reads that result from the library prep or PCR process. In the variant calling pipeline, they could result in false positives for structural variants.
+
+The second plot shows error metrics for the aligners. The error rate reported here is the proportion of high quality aligned bases (that is, they have Q20 or greater) that are mismatches. The mismatch rate is the overall proportion of all bases that shows mismatches to the reference. The indel rate is the frequency of insertions/deletions in the aligned reads. BWA-MEM consistently shows the lowest scores in all these metrics, while Bowtie2 shows the highest scores, suggesting that BWA-MEM alignments are likely more accurate and of higher quality. 
