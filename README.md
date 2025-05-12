@@ -9,9 +9,9 @@ Aligners being assessed in this project are:
 
 ### Comparing alignment metrics
 
-![](plots/overall_alignment_metrics.png)
+![This plot comapares various alignment metrics collected from picard and samtools. It shows the percent of aligned reads, and percent of reads aligned where both reads of a pair are aligned to the reference in the expected orientation and distance from each other. It also shows percent of reads where mapping quality is 0, indicating that the read aligned to multiple genome regions with equal confidence. The duplication rate indicates the amount of PCR duplicates, and percent of chimeras describes reads that could possibly represent structural variants.](plots/overall_alignment_metrics.png)
 
-![](plots/alignment_error_metrics.png)
+![This plot compares error rates between the aligners.](plots/alignment_error_metrics.png)
 
 
 ### Conclusions
