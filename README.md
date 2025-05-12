@@ -13,8 +13,8 @@ These plots show the distribution of insert sizes before (first row) and after (
 
 | BWA-MEM | Bowtie2 | GEM3 |
 |--------|---------|-------|
-| ![](plots/SRR3340911_bwa_insert_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_histogram.png) | ![](plots/SRR3340911_gem3_insert_histogram.png) |
-| ![](plots/SRR3340911_bwa_insert_filtered_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png) | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png) |
+| Raw SAM | ![](plots/SRR3340911_bwa_insert_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_histogram.png) | ![](plots/SRR3340911_gem3_insert_histogram.png) |
+| After filtering | ![](plots/SRR3340911_bwa_insert_filtered_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png) | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png) |
 
 ![This plot comapares various alignment metrics collected from picard and samtools.](plots/overall_alignment_metrics.png)
 
