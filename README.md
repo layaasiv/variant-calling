@@ -17,7 +17,7 @@ Before filtereing (raw SAM):
 |--------|---------|-------|
 |![](plots/SRR3340911_bwa_insert_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_histogram.png) | ![](plots/SRR3340911_gem3_insert_histogram.png) |
 
-After filtering (100 <= insert size >= 2000):
+After filtering (100 <= insert size <= 2000):
 
 | BWA-MEM | Bowtie2 | GEM3 |
 |--------|---------|-------|
