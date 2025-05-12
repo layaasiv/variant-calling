@@ -9,6 +9,13 @@ Aligners being assessed in this project are:
 
 ### Comparing alignment metrics
 
+These plots show the distribution of insert sizes before (first row) and after (second row) filtering. Reads with insert size lower than 100 or greater than 2000 were removed.
+
+| BWA-MEM | Bowtie2 | GEM3 |
+|--------|---------|-------|
+| ![](plots/SRR3340911_bwa_insert_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_histogram.png) | ![](plots/SRR3340911_gem3_insert_histogram.png) |
+| ![](plots/SRR3340911_bwa_insert_filtered_histogram.png) | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png) | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png) |
+
 ![This plot comapares various alignment metrics collected from picard and samtools.](plots/overall_alignment_metrics.png)
 
 ![This plot compares error rates between the aligners.](plots/alignment_error_metrics.png)
@@ -32,11 +39,7 @@ This table shows an overview of the data:
 
 ### Conclusions
 
-Look at alignment quality, all the reads were aligned to the reference genome for all aligners. It should be noted that the raw SAM out of the aligners were analyzed for insert size, and reads with insert sizes shorter than 100 or longer than 2000 were filtered out. The insert size histograms before and after filtering are shown below:
-
-| ![](plots/SRR3340911_bwa_insert_histogram.png "BWA-MEM raw BAM") | ![](plots/SRR3340911_bowtie2_insert_histogram.png "Bowtie2 raw SAM") | ![](plots/SRR3340911_gem3_insert_histogram.png "GEM3 raw SAM") |
-
-| ![](plots/SRR3340911_bwa_insert_filtered_histogram.png "BWA-MEM raw BAM") | ![](plots/SRR3340911_bowtie2_insert_filtered_histogram.png "Bowtie2 raw SAM") | ![](plots/SRR3340911_gem3_insert_filtered_histogram.png "GEM3 raw SAM") |
+Look at alignment quality, all the reads were aligned to the reference genome for all aligners. It should be noted that the raw SAM out of the aligners were analyzed for insert size, and reads with insert sizes shorter than 100 or longer than 2000 were filtered out. The insert size histograms before and after filtering are shown above.
 
 Most of the reads in BWA-MEM and Bowtie2 had their pair align as expected (matching orientation and distance from each other). 100% of the reads aligned using GEM3 achieved this. 
 
