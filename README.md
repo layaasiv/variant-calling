@@ -56,4 +56,4 @@ Mapping quality (MAPQ) describes the confidence with which a read has been align
 
 The second plot shows error metrics for the aligners. The error rate reported here is the proportion of high quality aligned bases (that is, they have Q20 or greater) that are mismatches. The mismatch rate is the overall proportion of all bases that shows mismatches to the reference. The indel rate is the frequency of insertions/deletions in the aligned reads. BWA-MEM consistently shows the lowest scores in all these metrics, while Bowtie2 shows the highest scores, suggesting that BWA-MEM alignments are likely more accurate and of higher quality. 
 
-From these data, BWA-MEM appears to be the best aligner to use for this Arabidopsis thaliana dataset to move forward with the variant calling pipeline.
+From these data, BWA-MEM appears to be the best aligner to use for this Arabidopsis thaliana dataset, considering the low error rates and high alignment quality.
