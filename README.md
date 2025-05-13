@@ -52,8 +52,8 @@ Look at alignment quality, all the reads were aligned to the reference genome fo
 
 Most of the reads in BWA-MEM and Bowtie2 had their pair align as expected (matching orientation and distance from each other). 100% of the reads aligned using GEM3 achieved this. 
 
-Mapping quality (MAPQ) describes the confidence with which a read has been aligned to a specific region of the genome. A lower MAPQ indicates that a read aligned to multiple regions with equal confidence, increasing the ambiguity of its alignment. BWA-MEM has the lowest proportion of reads with a MAPQ=0, whereas 47.9% of reads aligned by GEM3 are ambiguous. 
-
-All aligners show similarly high duplication rate, indicating that there are many PCR duplicates detected by all aligners in this dataset. The proportion of chimeric reads are very high in BWA-MEM. Usually, chimeras are artificial reads that result from the library prep or PCR process. In the variant calling pipeline, they could result in false positives for structural variants.
+Mapping quality (MAPQ) describes the confidence with which a read has been aligned to a specific region of the genome. A lower MAPQ indicates that a read aligned to multiple regions with equal confidence, increasing the ambiguity of its alignment. BWA-MEM has the lowest proportion of reads with a MAPQ=0, whereas 47.9% of reads aligned by GEM3 are ambiguous. All aligners show similarly high duplication rate, indicating that there are many PCR duplicates detected by all aligners in this dataset.
 
 The second plot shows error metrics for the aligners. The error rate reported here is the proportion of high quality aligned bases (that is, they have Q20 or greater) that are mismatches. The mismatch rate is the overall proportion of all bases that shows mismatches to the reference. The indel rate is the frequency of insertions/deletions in the aligned reads. BWA-MEM consistently shows the lowest scores in all these metrics, while Bowtie2 shows the highest scores, suggesting that BWA-MEM alignments are likely more accurate and of higher quality. 
+
+From these data, BWA-MEM appears to be the best aligner to use for this Arabidopsis thaliana dataset to move forward with the variant calling pipeline.
