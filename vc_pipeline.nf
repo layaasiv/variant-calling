@@ -7,6 +7,7 @@ params.ref_fasta = "/home/layaasiv/professional-dev/variant-calling/nextflow/ref
 params.read1 = "/home/layaasiv/professional-dev/variant-calling/reads/SRR3340911_1.fastq"
 params.read2 = "/home/layaasiv/professional-dev/variant-calling/reads/SRR3340911_2.fastq"
 params.refvcf = "/home/layaasiv/professional-dev/variant-calling/reference/arabidopsis_thaliana.vcf"
+params.truth_vcf = "/home/layaasiv/professional-dev/variant-calling/var_caller/truth_renamed.vcf.gz"
 
 // Output directory
 params.outdir = "/home/layaasiv/professional-dev/variant-calling/nf_revised/results_nf"
@@ -338,7 +339,7 @@ process alignment_metrics {
         path ref_fasta
         tuple path(markeddup_bam), path(markeddup_bai), val (base_fn), val(aligner)
 
-    publishDir "${params.outdir}/metrics/${aligner}", mode: "copy"
+    publishDir "${params.outdir}/metrics/aligners/${aligner}", mode: "copy"
     
     output:
         path "${base_fn}_${aligner}_st_stats.txt"
@@ -368,6 +369,224 @@ process alignment_metrics {
     """
 }
 
+/*
+ * Base quality score recalibration
+ */
+
+process bqsr {
+    container "broadinstitute/gatk"
+
+    publishDir "${params.outdir}/bwa", mode: "symlink"
+
+    input:
+        path ref_fasta
+        path ref_fasta_fai
+        path ref_fasta_dict
+        path ref_vcf
+        path ref_vcf_idx
+        path bwa_sorted_dedup_bam
+        path bwa_sorted_dedup_bai
+        val base_fn
+
+    output:
+        path "*.table", emit: "bwa_bqsr_recal_table"
+        path "*_bqsr.bam", emit: "bwa_bqsr_bam"
+
+    script:
+    """
+    echo "Building the BQSR model"
+
+    gatk BaseRecalibrator \
+    -I ${bwa_sorted_dedup_bam} \
+    -R ${ref_fasta} \
+    --known-sites ${ref_vcf} \
+    -O ${base_fn}_bqsr.table
+
+    echo "Applying the BQSR model"
+
+    gatk ApplyBQSR \
+    -I ${bwa_sorted_dedup_bam} \
+    -R ${ref_fasta} \
+    --bqsr-recal-file ${base_fn}_bqsr.table \
+    -O ${base_fn}_bqsr.bam
+    """
+}
+
+/*
+* GATK HaplotypeCaller for variant calling
+*/
+
+process gatk_haplotypecaller {
+    container "broadinstitute/gatk"
+
+    publishDir "${params.outdir}/gatk_hapcaller", mode: "symlink"
+
+    input:
+        path ref_fasta
+        path ref_fasta_fai
+        path ref_fasta_dict
+        path bwa_bqsr_bam
+        val base_fn
+    
+    output:
+        path "${base_fn}_raw_var_HC.vcf", emit: "bwa_hapcaller_vcf"
+    
+    script:
+    """
+    echo "Run HaplotyeCaller"
+
+    gatk HaplotypeCaller \
+    -R ${ref_fasta} \
+    -I ${bwa_bqsr_bam} \
+    -O ${base_fn}_raw_variants.vcf
+    """
+ }
+
+/*
+* FreeBayes variant caller
+*/
+
+process freebayes {
+    conda "/home/layaasiv/miniconda3/envs/sra-tools"
+
+    publishDir "${params.outdir}/freebayes", mode: "symlink"
+
+    input:
+        path ref_fasta
+        path bwa_bqsr_bam
+        val base_fn
+
+    output:
+        path "${base_fn}_raw_var_FB.vcf", emit: "bwa_fb_vcf"
+    
+    script:
+    """
+    freebayes -f ${ref_fasta} \
+    ${bwa_bqsr_bam} > \
+    ${base_fn}_raw_var_FB.vcf
+
+    """
+}
+
+/*
+* Evaluating variant callers: GATK VariantEval
+*/
+
+process gatk_varianteval {
+    container "broadinstitute/gatk"
+
+    publishDir "${params.outdir}/metrics/var-callers", mode: "copy"
+
+    input:
+        path ref_fasta
+        path ref_fai
+        path ref_fasta_dict
+        path query_vcf
+        path query_vcf_idx
+        path truth_vcf
+        path truth_vcf_idx
+        val var_caller
+        val base_fn
+
+    output:
+        path "${base_fn}_${var_caller}_gatkvareval_output.eval"
+
+    script:
+    """
+    gatk VariantEval \
+    -R ${ref_fasta} \
+    -eval ${query_vcf} \
+    -comp ${truth_vcf} \
+    -O ${base_fn}_${var_caller}_gatkvareval_output.eval
+    """
+}
+
+/*
+Evaluating variant callers: bcftools isec
+*/ 
+
+process bcftools_eval_gen {
+    conda "/home/layaasiv/miniconda3/envs/happy-tools"
+
+    publishDir "${params.outdir}/metrics/var-callers", mode: "copy"
+
+    input:
+        path query_vcf1
+        path query_vcf1_idx
+        path query_vcf2
+        path query_vcf2_idx
+        path truth_vcf
+        val base_fn
+
+    output:
+        path "${base_fn}_truth.stats"
+        path "isec_output/*"
+
+    script:
+    """
+    bcftools isec -p isec_output -n=2 -w1 ${query_vcf1} ${query_vcf2}
+
+    bcftools stats ${truth_vcf} > ${base_fn}_truth.stats
+    """
+}
+
+/*
+Evaluating variant callers: bcftools stats
+*/ 
+
+process bcftools_eval_vc_spec {
+    conda "/home/layaasiv/miniconda3/envs/happy-tools"
+
+    publishDir "${params.outdir}/metrics/var-callers", mode: "copy"
+
+    input:
+        path query_vcf
+        path query_vcf_idx
+        val base_fn
+        val var_caller
+
+    output:
+        path "${base_fn}_${var_caller}.stats"
+
+    script:
+    """
+    bcftools stats ${query_vcf} > ${base_fn}_${var_caller}.stats
+    """
+}
+
+/*
+Evaluating variant callers: Illumina hap.py
+*/ 
+
+process hap_py_eval {
+    container "miguelpmachado/hap.py_illumina:0.3.10-8-gdac84d9-02"
+
+    publishDir "${params.outdir}/metrics/var-callers", mode: "copy"
+
+    input:
+        path ref_fasta
+        path ref_fai
+        path ref_fasta_dict
+        path truth_vcf
+        path truth_vcf_idx
+        path query_vcf
+        path query_vcf_idx
+        val var_caller
+
+    output:
+        path "happy/happy_${var_caller}*"
+
+    script:
+    """
+    mkdir -p happy
+
+    hap.py \
+    ${truth_vcf} ${query_vcf} \
+    -r ${ref_fasta} \
+    -o happy/happy_${var_caller}
+    """
+}
+
 workflow preprocess_qc {
     take:
     ref_fasta
@@ -392,6 +611,9 @@ workflow preprocess_qc {
     emit:
     trimmed_read1 = trimmed_out.trimmed_read1
     trimmed_read2 = trimmed_out.trimmed_read2
+    ref_fasta_fai = st_index_out.ref_fasta_fai
+    ref_fasta_dict = gatk_dict_out.ref_fasta_dict
+    ref_vcf_idx = gatk_vcfidx.ref_vcf_idx
 
 }
 
@@ -413,6 +635,11 @@ workflow bwa_wf {
     markdup_out = markduplicates(st_sort_index_out.sorted_bam_bai)
     // Collect alignment metrics for BWA alignment
     alignment_metrics(ref_fasta, markdup_out.markdup_bam_bai)
+
+    emit:
+    bwa_markdup_bam = markdup_out.markdup_bam_bai.map { it[0] }
+    bwa_markdup_bai = markdup_out.markdup_bam_bai.map { it[1] }
+
 }
 
 
@@ -444,6 +671,118 @@ workflow bowtie2_wf {
     alignment_metrics(ref_fasta, markdup_out.markdup_bam_bai)
 }
 
+workflow var_call_wf {
+    take:
+    ref_fasta
+    ref_fasta_fai
+    ref_fasta_dict
+    ref_vcf
+    ref_vcf_idx
+    bwa_markdup_bam
+    bwa_markdup_bai
+    base_fn
+
+    main:
+    // Run GATK base quality recalibrator 
+    bqsr_out = bqsr(ref_fasta, ref_fasta_fai, ref_fasta_dict, ref_vcf, ref_vcf_idx, bwa_markdup_bam, bwa_markdup_bai, base_fn)
+
+    // Run GATK HaplotypeCaller
+    hapcaller_out = gatk_haplotypecaller(ref_fasta, ref_fasta_fai, ref_fasta_dict, bqsr_out.bwa_bqsr_bam, base_fn)
+
+    // Run FreeBayes variant caller
+    freebayes_out = freebayes(ref_fasta, bqsr_out.bwa_bqsr_bam, base_fn)
+
+    emit:
+    hc_vcf = hapcaller_out.bwa_hapcaller_vcf
+    fb_vcf = freebayes_out.bwa_fb_vcf
+
+} 
+
+workflow vc_eval_general_setup {
+    take:
+    truth_vcf
+
+    main:
+    // Index feature file for truth
+    gatk_indexvcf_out = gatk_indexvcf(truth_vcf)
+
+    emit:
+    truth_vcf_idx = gatk_indexvcf_out.vcf_idx
+    
+}
+
+workflow hc_eval {
+    take:
+    ref_fasta
+    ref_fai
+    ref_fasta_dict
+    hc_vcf
+    truth_vcf
+    truth_vcf_idx
+    hc_var_caller
+    base_fn
+
+    main:
+    // Index feature file for query
+    gatk_indexvcf_out = gatk_indexvcf(hc_vcf)
+    
+    // VC evaluation: GATK VariantEval
+    gatk_varianteval_out = gatk_varianteval(ref_fasta, ref_fai, ref_fasta_dict, hc_vcf, gatk_indexvcf_out.vcf_idx, truth_vcf, truth_vcf_idx, hc_var_caller, base_fn)
+
+    //VC evaluation: BCFTools stats 
+    bcftools_eval_vc_spec(hc_vcf, gatk_indexvcf_out.vcf_idx, base_fn, hc_var_caller)
+
+    // VC evaluation: hap.py
+    hap_py_eval(ref_fasta, ref_fai, ref_fasta_dict, truth_vcf, truth_vcf_idx, hc_vcf, gatk_indexvcf_out.vcf_idx, hc_var_caller)
+
+    emit:
+    hc_vcf_idx = gatk_indexvcf_out.vcf_idx
+
+}
+
+workflow fb_eval {
+    take:
+    ref_fasta
+    ref_fai
+    ref_fasta_dict
+    fb_vcf
+    truth_vcf
+    truth_vcf_idx
+    fb_var_caller
+    base_fn
+
+    main:
+    // Index feature file for query
+    gatk_indexvcf_out = gatk_indexvcf(fb_vcf)
+    
+    // VC evaluation: GATK VariantEval
+    gatk_varianteval_out = gatk_varianteval(ref_fasta, ref_fai, ref_fasta_dict, fb_vcf, gatk_indexvcf_out.vcf_idx, truth_vcf, truth_vcf_idx, fb_var_caller, base_fn)
+
+    //VC evaluation: BCFTools stats 
+    bcftools_eval_vc_spec(fb_vcf, gatk_indexvcf_out.vcf_idx, base_fn, fb_var_caller)
+
+    // VC evaluation: hap.py
+    hap_py_eval(ref_fasta, ref_fai, ref_fasta_dict, truth_vcf, truth_vcf_idx, fb_vcf, gatk_indexvcf_out.vcf_idx, fb_var_caller)
+
+    emit:
+    fb_vcf_idx = gatk_indexvcf_out.vcf_idx
+}
+
+workflow overall_eval {
+    take:
+    query_vcf1
+    query_vcf1_idx
+    query_vcf2
+    query_vcf2_idx
+    truth_vcf
+    base_fn
+
+    main:
+    // VC evaluation: BCFTools isec & stats 
+    bcftools_eval_gen(query_vcf1, query_vcf1_idx, query_vcf2, query_vcf2_idx, truth_vcf, base_fn)
+}
+
+
 workflow {
     // Raw inputs
     fasta_ch = Channel.fromPath(params.ref_fasta)
@@ -463,6 +802,11 @@ workflow {
     RGPL_ch = Channel.value("ILLUMINA")
     RGPU_ch = Channel.value("seq")
     RGSM_ch = Channel.value("SRR3340911")
+
+    // Variant calling inputs
+    truth_vcf_ch = Channel.fromPath(params.truth_vcf)
+    hc_var_caller_ch = Channel.value("HC")
+    fb_var_caller_ch = Channel.value("FB")
 
     // Preprocess data and complete QC of raw FASTQ read files
     preprocess_qc(
@@ -492,5 +836,51 @@ workflow {
         RGPL_ch,
         RGPU_ch,
         RGSM_ch
+        )
+    
+    var_call_wf(
+        fasta_ch,
+        preprocess_qc.out.ref_fasta_fai,
+        preprocess_qc.out.ref_fasta_dict,
+        refvcf_ch,
+        preprocess_qc.out.ref_vcf_idx,
+        bwa_wf.out.bwa_markdup_bam,
+        bwa_wf.out.bwa_markdup_bai,
+        base_fn_ch
+        )
+
+    vc_eval_general_setup(
+        truth_vcf_ch
+        )
+
+    hc_eval(
+        fasta_ch,
+        preprocess_qc.out.ref_fasta_fai,
+        preprocess_qc.out.ref_fasta_dict,
+        var_call_wf.out.hc_vcf,
+        truth_vcf_ch,
+        vc_eval_general_setup.out.truth_vcf_idx,
+        hc_var_caller_ch,
+        base_fn_ch
+        )
+
+    fb_eval(
+        fasta_ch,
+        preprocess_qc.out.ref_fasta_fai,
+        preprocess_qc.out.ref_fasta_dict,
+        var_call_wf.out.fb_vcf,
+        truth_vcf_ch,
+        vc_eval_general_setup.out.truth_vcf_idx,
+        fb_var_caller_ch,
+        base_fn_ch
+        )
+
+    overall_eval(
+        var_call_wf.out.hc_vcf,
+        hc_eval.out.hc_vcf_idx,
+        var_call_wf.out.fb_vcf,
+        fb_eval.out.fb_vcf_idx,
+        truth_vcf_ch,
+        base_fn_ch
         )
 }
