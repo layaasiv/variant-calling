@@ -64,7 +64,7 @@ Variant callers being assessed in this project are:
 
 ### Comparing variant caller metrics 
 
-These metrics are collected from Illumina's hap.py tool, which assesses performance of variant callers against a truth set. I used the ![gold standard of Nd1 vs TAIR10 sequence variants](https://pub.uni-bielefeld.de/record/2942069) from Schilbert H, Rempel A & Pucker B (2020) as the truth set. 
+These metrics are collected from Illumina's hap.py tool, which assesses performance of variant callers against a truth set. I used the [gold standard of Nd1 vs TAIR10 sequence variants](https://pub.uni-bielefeld.de/record/2942069) from Schilbert H, Rempel A & Pucker B (2020) as the truth set. 
 
 TP, FP and FN counts:
 
