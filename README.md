@@ -2,7 +2,7 @@
 Comparing different tools used in the variant calling pipeline. Replicating the work done in this paper: Comparison of Read Mapping and Variant Calling Tools for the Analysis of Plant NGS Data (Pucker et al. 2020). 
 
 ## Data
-WGS data from *Arabidopsis thaliana* Col-0 and Nd-1. 
+WGS data from *Arabidopsis thaliana* Col-0 and Nd-1. TAIR10 was used as the reference genome.
 
 ## Aligners
 Aligners being assessed in this project are: 
@@ -61,7 +61,7 @@ The second plot shows error metrics for the aligners. The error rate reported he
 These results align with literature: BWA uses Burrows-Wheeler Transform and Smith Waterman alignment, which allows for gapped alignment. This results in better alignment accuracy for reads with indels and mismatches, which is important for complex and variant-rich genomes such as *A. thaliana*. Without gapped alignment, many of these reads may map incorrectly with artificial mismatches spread across the indel region or fail to map entirely. While Bowtie2 also supports gapped alignment, it's algorithm prioritizes speed and sometimes chooses suboptimal alignments. BWA-MEM is relatively more conservative and optimized for variant calling accuracy. This supports the lower mismatch and indel rates observed in BWA-MEM compared to Bowtie2 here.
 
 Bowtie2 is faster and more sensitive, and generally works better for aligning large datasets of short reads (<100bp). For example, it would work well for aligning transcriptomic data to transcriptomes. 
-BWA generally offers higher accuracy, particularly for longer or more complex reads, and handles indels well, making it preferred for variant calling and complex genomes such as *A. thaliana*. 
+BWA generally offers higher accuracy, particularly for longer or more complex reads, and handles indels well, making it preferred for variant calling and complex genomes.
 
 From these data, BWA-MEM appears to be the best aligner to use for this *A. thaliana* dataset, considering the low error rates and high alignment quality.
 
