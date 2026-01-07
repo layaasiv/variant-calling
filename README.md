@@ -1,5 +1,8 @@
 # Comparing Variant Calling Tools
-Comparing different tools used in the variant calling pipeline. Replicating the work done in this paper: Comparison of Read Mapping and Variant Calling Tools for the Analysis of Plant NGS Data (Pucker et al. 2020).
+Comparing different tools used in the variant calling pipeline. Replicating the work done in this paper: Comparison of Read Mapping and Variant Calling Tools for the Analysis of Plant NGS Data (Pucker et al. 2020). 
+
+## Data
+WGS data from *Arabidopsis thaliana* Col-0 and Nd-1. 
 
 ## Aligners
 Aligners being assessed in this project are: 
@@ -55,7 +58,12 @@ Mapping quality (MAPQ) describes the confidence with which a read has been align
 
 The second plot shows error metrics for the aligners. The error rate reported here is the proportion of high quality aligned bases (that is, they have Q20 or greater) that are mismatches. The mismatch rate is the overall proportion of all bases that shows mismatches to the reference. The indel rate is the frequency of insertions/deletions in the aligned reads. BWA-MEM consistently shows the lowest scores in all these metrics, while Bowtie2 shows the highest scores, suggesting that BWA-MEM alignments are likely more accurate and of higher quality. 
 
-From these data, BWA-MEM appears to be the best aligner to use for this Arabidopsis thaliana dataset, considering the low error rates and high alignment quality.
+These results align with literature: BWA uses Burrows-Wheeler Transform and Smith Waterman alignment, which allows for gapped alignment. This results in better alignment accuracy for reads with indels and mismatches, which is important for complex and variant-rich genomes such as *A. thaliana*. Without gapped alignment, many of these reads may map incorrectly with artificial mismatches spread across the indel region or fail to map entirely. While Bowtie2 also supports gapped alignment, it's algorithm prioritizes speed and sometimes chooses suboptimal alignments. BWA-MEM is relatively more conservative and optimized for variant calling accuracy. This supports the lower mismatch and indel rates observed in BWA-MEM compared to Bowtie2 here.
+
+Bowtie2 is faster and more sensitive, and generally works better for aligning large datasets of short reads (<100bp). For example, it would work well for aligning transcriptomic data to transcriptomes. 
+BWA generally offers higher accuracy, particularly for longer or more complex reads, and handles indels well, making it preferred for variant calling and complex genomes such as *A. thaliana*. 
+
+From these data, BWA-MEM appears to be the best aligner to use for this *A. thaliana* dataset, considering the low error rates and high alignment quality.
 
 ## Variant Callers
 Variant callers being assessed in this project are:
@@ -95,6 +103,6 @@ Scores grouped by variant type:
 
 ### Conclusions 
 
-In general, both variant callers perform similarly besed on these metrics. GATK HaplotypeCaller has a better precision and F1 score than FreeBayes for the data in this experiment, which indicates greater accuracy in the variants it is calling. On the other hand, FreeBayes has a slightly better recall (sensitivity) score, indicating that it finds a greater number of true variants. However, FreeBayes also has more false positives than HaplotypeCaller, which contributes to its lower precision score. 
+In general, both variant callers perform similarly based on these metrics. GATK HaplotypeCaller has a better precision and F1 score than FreeBayes for the data in this experiment, which indicates greater accuracy in the variants it is calling. On the other hand, FreeBayes has a slightly better recall (sensitivity) score, indicating that it finds a greater number of true variants. However, FreeBayes also has more false positives than HaplotypeCaller, which contributes to its lower precision score. 
 
-The Ti/Tv and Het/Hom ratios are also in expected ranges. Since I am finding intraspecies variants between Nd-1 and Col-0 ecotypes of Arabidopsis thaliana, the expected Ti/Tv ratio for this comparison is 1.0-1.4. Likewise, a low Het/Hom (<0.5) ratio is expected due to the high amount of inbreeding in Arabidopsis, resulting in a highly homozygous genome.
+The Ti/Tv and Het/Hom ratios are also in expected ranges. Since I am finding intraspecies variants between Nd-1 and Col-0 ecotypes of *A. thaliana*, the expected Ti/Tv ratio for this comparison is 1.0-1.4. Likewise, a low Het/Hom (<0.5) ratio is expected due to the high amount of inbreeding in Arabidopsis, resulting in a highly homozygous genome.
